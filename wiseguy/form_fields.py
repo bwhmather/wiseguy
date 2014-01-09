@@ -43,13 +43,15 @@ def _boostrapise(func, context, id, class_=None, controls_length=1, **kwargs):
     return element
 
 
-def _input(context, id, label, input_type, value=_default, class_=None, extra_attrs=None):
+def _input(context, id, label, input_type, value=_default, class_=None, extra_attrs=None, name=_default):
     if value is _default:
         value = unicode((context.get('data', False) or {}).get(id, ''))
     if not extra_attrs:
         extra_attrs = dict()
     if class_:
         extra_attrs['class'] = class_
+    if name is _default:
+        name = id
     if context.get('disabled_form', False):
         element = html.DIV(
             html.LABEL(
@@ -58,7 +60,7 @@ def _input(context, id, label, input_type, value=_default, class_=None, extra_at
             html.INPUT(
                 extra_attrs,
                 type=input_type,
-                name=id,
+                name=name,
                 id=id,
                 value=value,
                 disabled="disabled"))
@@ -70,15 +72,15 @@ def _input(context, id, label, input_type, value=_default, class_=None, extra_at
             html.INPUT(
                 extra_attrs,
                 type=input_type,
-                name=id,
+                name=name,
                 id=id,
                 value=value))
     add_errors(context, element, id)
     return element
 
 
-def _search(context, id, label, input_type, value=_default, link_class=None, extra_attrs=None, help=None):
-    element = _input(context, id, label, input_type="text")
+def _search(context, id, label, input_type, value=_default, link_class=None, extra_attrs=None, help=None, name=_default):
+    element = _input(context, id, label, input_type="text", name=name)
     if not extra_attrs:
         extra_attrs = dict()
     if link_class:
@@ -95,19 +97,19 @@ def _search(context, id, label, input_type, value=_default, link_class=None, ext
 
 
 @j2.contextfunction
-def input(context, id, label, class_=None, extra_attrs=None):
+def input(context, id, label, class_=None, extra_attrs=None, name=_default):
     "A simple input element"
-    return _input(context, id, label, input_type="text", class_=class_)
+    return _input(context, id, label, input_type="text", class_=class_, name=name)
 
 
 @j2.contextfunction
-def search(context, id, label, help=None):
+def search(context, id, label, help=None, name=_default):
     "A basic search element with link"
-    return _search(context, id, label, input_type="text", help=help)
+    return _search(context, id, label, input_type="text", help=help, name=name)
 
 
-def _checkbox(context, id, label, value=_default, disabled=False):
-    elements = _input(context, id, label, input_type="checkbox", value=value)
+def _checkbox(context, id, label, value=_default, disabled=False, name=_default):
+    elements = _input(context, id, label, input_type="checkbox", value=value, name=name)
     data_value = (context.get('data', False) or {}).get(id, '')
     if isinstance(data_value, (list, tuple)):
         if value in data_value:
@@ -118,15 +120,15 @@ def _checkbox(context, id, label, value=_default, disabled=False):
 
 
 @j2.contextfunction
-def checkbox(context, id, label, value=_default, disabled=False):
+def checkbox(context, id, label, value=_default, disabled=False, name=_default):
     "A simple input element"
-    return _checkbox(context, id, label, value, disabled)
+    return _checkbox(context, id, label, value, disabled, name)
 
 
 @j2.contextfunction
-def password(context, id, label):
+def password(context, id, label, name=_default):
     "A password element.  Won't fill the value even if present in context['data']"
-    elements = _input(context, id, label, input_type="password")
+    elements = _input(context, id, label, input_type="password", name=name)
     elements[1].attrib['value'] = ""
     return elements
 
@@ -147,13 +149,15 @@ def datepicker(context, id, label):
     return '\n'.join(elements)
 
 
-def _textarea(context, id, label):
+def _textarea(context, id, label, name=_default):
     data = context.get('data', False) or {}
     text = data.get(id, '')
     if isinstance(text, str):
         text = text.decode('utf8')
     else:
         text = unicode(text)
+    if name is _default:
+        name = id
     if context.get('disabled_form', False):
         element = html.DIV(
             html.LABEL(
@@ -161,7 +165,7 @@ def _textarea(context, id, label):
                 {'for': id}),
             html.TEXTAREA(
                 text,
-                name=id,
+                name=name,
                 id=id,
                 disabled="disabled",
                 ))
@@ -172,7 +176,7 @@ def _textarea(context, id, label):
                 {'for': id}),
             html.TEXTAREA(
                 text,
-                name=id,
+                name=name,
                 id=id,
                 ))
     add_errors(context, element, id)
@@ -180,8 +184,8 @@ def _textarea(context, id, label):
 
 
 @j2.contextfunction
-def textarea(context, id, label):
-    return _textarea(context, id, label)
+def textarea(context, id, label, name=_default):
+    return _textarea(context, id, label, name)
 
 
 def _editor(context, id, label, script, class_):
@@ -302,7 +306,7 @@ def wysihtml5(context, id, label):
     return html.DIV(*elements)
 
 
-def _select(context, id, label, options, disabled, blank_option):
+def _select(context, id, label, options, disabled, blank_option, name=_default):
     option_elements = []
     selected = unicode((context.get('data', False) or {}).get(id, ''))
     if blank_option:
@@ -320,6 +324,8 @@ def _select(context, id, label, options, disabled, blank_option):
         else:
             o = html.OPTION(text, value=value)
         option_elements.append(o)
+    if name is _default:
+        name = id
     if disabled or context.get('disabled_form', False):
         element = html.DIV(
             html.LABEL(
@@ -328,7 +334,7 @@ def _select(context, id, label, options, disabled, blank_option):
             html.SELECT(
                 "\n",
                 *option_elements,
-                name=id,
+                name=name,
                 id=id,
                 disabled="disabled"))
     else:
@@ -339,24 +345,27 @@ def _select(context, id, label, options, disabled, blank_option):
             html.SELECT(
                 "\n",
                 *option_elements,
-                name=id,
+                name=name,
                 id=id))
     add_errors(context, element, id)
     return element
 
 
 @j2.contextfunction
-def select(context, id, label, options, disabled=False, blank_option=True):
+def select(context, id, label, options, disabled=False, blank_option=True, name=_default):
     "A select element.  Accepts a list of value, text pairs"
-    return _select(context, id, label, options, disabled, blank_option)
+    return _select(context, id, label, options, disabled, blank_option, name)
 
 
 @j2.contextfunction
-def submit(context, id="submit", label="Submit", class_=""):
+def submit(context, id="submit", label="Submit", class_="", name=_default):
     "A simple submit button"
+    if name is _default:
+        name = id
     kwargs = dict(
         type="submit",
         id=id,
+        name=name,
         value=label)
     if context.get('disabled_form', False):
         kwargs['disabled'] = 'disabled'
